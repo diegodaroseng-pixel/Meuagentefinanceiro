@@ -1,4 +1,10 @@
 {
     "buildCommand": "next build",
-    "outputDirectory": ".next"
+    "outputDirectory": ".next",
+    "framework": "nextjs",
+    "functions": {
+        "middleware.ts": {
+            "runtime": "nodejs20.x"
+        }
+    }
 }
