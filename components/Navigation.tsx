@@ -9,7 +9,7 @@ export default function Navigation() {
     const pathname = usePathname();
 
     const links = [
-        { href: '/', label: 'Dashboard', icon: Home },
+        { href: '/dashboard', label: 'Dashboard', icon: Home },
         { href: '/upload', label: 'Upload', icon: Upload },
         { href: '/database', label: 'Banco de Dados', icon: Database },
         { href: '/forecasts', label: 'Previsões', icon: TrendingUp },
@@ -31,8 +31,8 @@ export default function Navigation() {
                                     key={link.href}
                                     href={link.href}
                                     className={`flex items-center px-4 py-2 rounded-lg transition-colors ${isActive
-                                            ? 'bg-blue-600 text-white'
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <Icon className="w-5 h-5 mr-2" />

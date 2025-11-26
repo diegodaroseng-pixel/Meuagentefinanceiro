@@ -1,9 +1,5 @@
-import Dashboard from '@/components/Dashboard';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-    return (
-        <main className="min-h-screen bg-gray-50">
-            <Dashboard />
-        </main>
-    );
+    redirect('/upload');
 }
