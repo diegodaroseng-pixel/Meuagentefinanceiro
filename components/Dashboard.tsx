@@ -50,10 +50,27 @@ export default function Dashboard() {
         );
     }
 
-    if (!data) {
+    if (!data || data.metrics.transactionCount === 0) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-xl text-red-600">Erro ao carregar dados</div>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-8">
+                <div className="bg-white rounded-lg shadow-lg p-12 max-w-2xl text-center">
+                    <div className="text-6xl mb-6">📊</div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-4">Bem-vindo ao seu Dashboard Financeiro!</h1>
+                    <p className="text-lg text-gray-600 mb-8">
+                        Você ainda não tem transações cadastradas. Comece fazendo o upload de um extrato bancário!
+                    </p>
+                    <div className="space-y-4">
+                        <a
+                            href="/upload"
+                            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                        >
+                            📤 Fazer Upload de Extrato
+                        </a>
+                        <p className="text-sm text-gray-500">
+                            Ou adicione transações manualmente na página de Banco de Dados
+                        </p>
+                    </div>
+                </div>
             </div>
         );
     }
