@@ -1,0 +1,6 @@
+cd C:\Users\diego\.gemini\antigravity\scratch\financial_agent\financial-agent-nextjs
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/SEU_USUARIO/financial-agent-nextjs.git
+git push -u origin main
