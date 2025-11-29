@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 export async function POST(request: NextRequest) {
     try {
+        const { userId } = await auth();
+
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const apiKey = process.env.GOOGLE_API_KEY;
         if (!apiKey) {
             console.error('Missing GOOGLE_API_KEY');
@@ -88,12 +94,42 @@ Retorne APENAS um JSON válido no formato:
             throw new Error('Failed to parse AI response: Invalid JSON');
         }
 
-        // Add status to each transaction (simulate duplicate check)
-        if (data.transactions) {
-            data.transactions = data.transactions.map((tx: any) => ({
-                ...tx,
-                status: 'new', // In real app, check against database
-            }));
+        // Check for duplicates in database
+        if (data.transactions && data.transactions.length > 0) {
+            const checkedTransactions = await Promise.all(
+                data.transactions.map(async (tx: any) => {
+                    // Check for exact match
+                    const exactMatch = await prisma.transaction.findFirst({
+                        where: {
+                            userId,
+                            description: tx.description,
+                            amount: tx.amount,
+                            date_incurred: new Date(tx.date_incurred),
+                        },
+                    });
+
+                    if (exactMatch) {
+                        return { ...tx, status: 'exact' };
+                    }
+
+                    // Check for similar match (same description and amount, different date)
+                    const similarMatch = await prisma.transaction.findFirst({
+                        where: {
+                            userId,
+                            description: tx.description,
+                            amount: tx.amount,
+                        },
+                    });
+
+                    if (similarMatch) {
+                        return { ...tx, status: 'similar' };
+                    }
+
+                    return { ...tx, status: 'new' };
+                })
+            );
+
+            data.transactions = checkedTransactions;
         } else {
             data.transactions = [];
         }

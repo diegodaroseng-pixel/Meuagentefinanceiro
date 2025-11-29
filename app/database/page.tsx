@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Trash2, Save, Filter, Download } from 'lucide-react';
+import { Trash2, Save, Filter, Download, Search, Edit } from 'lucide-react';
 
 interface Transaction {
     id: number;
@@ -25,6 +25,11 @@ export default function DatabasePage() {
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterType, setFilterType] = useState('all');
+    const [searchQuery, setSearchQuery] = useState('');
+
+    // Edit Modal State
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
     useEffect(() => {
         fetchTransactions();
@@ -83,25 +88,76 @@ export default function DatabasePage() {
         }
     };
 
-    const handleUpdate = async (id: number, field: string, value: any) => {
+    const handleEditClick = () => {
+        if (selectedIds.size !== 1) return;
+        const id = Array.from(selectedIds)[0];
+        const transaction = transactions.find(t => t.id === id);
+        if (transaction) {
+            setEditingTransaction({ ...transaction });
+            setIsEditing(true);
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingTransaction) return;
+
         try {
             const response = await fetch('/api/transactions', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, field, value }),
+                body: JSON.stringify({
+                    id: editingTransaction.id,
+                    updates: {
+                        description: editingTransaction.description,
+                        amount: editingTransaction.amount,
+                        date_incurred: editingTransaction.date_incurred,
+                        category: editingTransaction.category,
+                        behavior_class: editingTransaction.behavior_class,
+                        bank_name: editingTransaction.bank_name,
+                        card_holder: editingTransaction.card_holder
+                    }
+                }),
             });
 
             if (response.ok) {
+                alert('Transação atualizada com sucesso!');
+                setIsEditing(false);
+                setEditingTransaction(null);
+                setSelectedIds(new Set()); // Deselect after edit
                 fetchTransactions();
+            } else {
+                alert('Erro ao atualizar transação');
             }
         } catch (error) {
-            console.error('Error updating:', error);
+            console.error('Error saving edit:', error);
+            alert('Erro ao salvar alterações');
         }
     };
 
     const filteredTransactions = transactions.filter(t => {
+        // Category filter
         if (filterCategory !== 'all' && t.category !== filterCategory) return false;
+
+        // Type filter
         if (filterType !== 'all' && t.behavior_class !== filterType) return false;
+
+        // Search query filter (searches across multiple fields)
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const searchableText = [
+                t.description,
+                t.amount.toString(),
+                new Date(t.date_incurred).toLocaleDateString('pt-BR'),
+                t.category,
+                t.behavior_class,
+                t.bank_name,
+                t.card_holder,
+                `${t.installment_current}/${t.installment_total}`,
+            ].join(' ').toLowerCase();
+
+            if (!searchableText.includes(query)) return false;
+        }
+
         return true;
     });
 
@@ -122,6 +178,28 @@ export default function DatabasePage() {
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">🗄️ Banco de Dados</h1>
                 <p className="text-gray-600 mb-8">Gerencie suas transações</p>
 
+                {/* Search */}
+                <div className="bg-green-50 border-2 border-green-500 rounded-lg shadow-md p-4 mb-6">
+                    <div className="flex items-center gap-3">
+                        <Search className="w-5 h-5 text-green-600" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por descrição, valor, data, categoria..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="flex-1 border-0 bg-transparent text-gray-900 font-medium placeholder-gray-500 focus:outline-none focus:ring-0 text-lg"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="text-gray-500 hover:text-gray-700 font-medium"
+                            >
+                                Limpar
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {/* Filters */}
                 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                     <div className="flex items-center gap-4">
@@ -132,7 +210,7 @@ export default function DatabasePage() {
                                 <select
                                     value={filterCategory}
                                     onChange={(e) => setFilterCategory(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-medium hover:bg-blue-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition-colors"
                                 >
                                     <option value="all">Todas</option>
                                     {categories.map(cat => (
@@ -145,7 +223,7 @@ export default function DatabasePage() {
                                 <select
                                     value={filterType}
                                     onChange={(e) => setFilterType(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-medium hover:bg-blue-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition-colors"
                                 >
                                     <option value="all">Todos</option>
                                     {types.map(type => (
@@ -171,10 +249,19 @@ export default function DatabasePage() {
                         )}
                     </div>
                     <div className="flex gap-2">
+                        {selectedIds.size === 1 && (
+                            <button
+                                onClick={handleEditClick}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                                <Edit className="w-4 h-4" />
+                                Editar
+                            </button>
+                        )}
                         {selectedIds.size > 0 && (
                             <button
                                 onClick={handleDelete}
-                                className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+                                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                             >
                                 <Trash2 className="w-4 h-4" />
                                 Excluir Selecionadas
@@ -243,7 +330,6 @@ export default function DatabasePage() {
                     </div>
                 </div>
 
-
                 {filteredTransactions.length === 0 && transactions.length === 0 && (
                     <div className="text-center py-16 bg-white rounded-lg shadow-md">
                         <div className="text-6xl mb-4">🗄️</div>
@@ -264,6 +350,106 @@ export default function DatabasePage() {
                     </div>
                 )}
             </div>
+
+            {/* Edit Modal */}
+            {isEditing && editingTransaction && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-2xl shadow-xl">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800">Editar Transação</h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                                <input
+                                    type="text"
+                                    value={editingTransaction.description}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, description: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editingTransaction.amount}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, amount: parseFloat(e.target.value) })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                                <input
+                                    type="date"
+                                    value={new Date(editingTransaction.date_incurred).toISOString().split('T')[0]}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, date_incurred: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                                <select
+                                    value={editingTransaction.category}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, category: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                >
+                                    <option value="Alimentação">Alimentação</option>
+                                    <option value="Transporte">Transporte</option>
+                                    <option value="Moradia">Moradia</option>
+                                    <option value="Saúde">Saúde</option>
+                                    <option value="Educação">Educação</option>
+                                    <option value="Lazer">Lazer</option>
+                                    <option value="Serviços Online">Serviços Online</option>
+                                    <option value="Outros">Outros</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Classificação</label>
+                                <select
+                                    value={editingTransaction.behavior_class}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, behavior_class: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                >
+                                    <option value="Essencial">Essencial</option>
+                                    <option value="Supérfluo">Supérfluo</option>
+                                    <option value="Investimento">Investimento</option>
+                                    <option value="Lazer">Lazer</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
+                                <input
+                                    type="text"
+                                    value={editingTransaction.bank_name || ''}
+                                    onChange={(e) => setEditingTransaction({ ...editingTransaction, bank_name: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsEditing(false)}
+                                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSaveEdit}
+                                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-2"
+                            >
+                                <Save className="w-4 h-4" />
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

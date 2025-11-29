@@ -190,7 +190,7 @@ export default function UploadPage() {
                                     <select
                                         value={selectedBank}
                                         onChange={(e) => setSelectedBank(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-medium hover:bg-blue-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition-colors"
                                     >
                                         <option value="">Selecione...</option>
                                         <option value="Nubank">Nubank</option>
@@ -206,7 +206,7 @@ export default function UploadPage() {
                                         value={selectedCard}
                                         onChange={(e) => setSelectedCard(e.target.value)}
                                         placeholder="Ex: 1234 ou Black"
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-medium hover:bg-blue-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                                     />
                                 </div>
                                 <div>
@@ -214,7 +214,7 @@ export default function UploadPage() {
                                     <select
                                         value={selectedHolder}
                                         onChange={(e) => setSelectedHolder(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-medium hover:bg-blue-50 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition-colors"
                                     >
                                         <option value="Diego de Bem Daros">Diego de Bem Daros</option>
                                         <option value="Celiane">Celiane</option>

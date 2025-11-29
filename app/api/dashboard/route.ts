@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
         const { userId } = await auth();
 
@@ -13,11 +13,50 @@ export async function GET() {
             );
         }
 
+        // Check if user has any transactions at all (for welcome screen)
+        const totalCount = await prisma.transaction.count({
+            where: { userId }
+        });
+
+        // Get filter parameters
+        const searchParams = request.nextUrl.searchParams;
+        const month = searchParams.get('month');
+        const year = searchParams.get('year');
+
+        // Build where clause
+        const where: any = {
+            userId,
+            // Removed is_forecast: false to include future installments
+        };
+
+        // Add date filtering if month/year provided
+        if (month || year) {
+            const startDate = new Date();
+            const endDate = new Date();
+
+            if (year && month) {
+                // Specific month and year
+                startDate.setFullYear(parseInt(year), parseInt(month) - 1, 1);
+                endDate.setFullYear(parseInt(year), parseInt(month), 0);
+            } else if (year) {
+                // Entire year
+                startDate.setFullYear(parseInt(year), 0, 1);
+                endDate.setFullYear(parseInt(year), 11, 31);
+            } else if (month) {
+                // Specific month in current year
+                const currentYear = new Date().getFullYear();
+                startDate.setFullYear(currentYear, parseInt(month) - 1, 1);
+                endDate.setFullYear(currentYear, parseInt(month), 0);
+            }
+
+            where.date_incurred = {
+                gte: startDate,
+                lte: endDate,
+            };
+        }
+
         const transactions = await prisma.transaction.findMany({
-            where: {
-                userId,
-                is_forecast: false,
-            },
+            where,
         });
 
         // Calculate metrics
@@ -72,11 +111,12 @@ export async function GET() {
                 totalSpent,
                 transactionCount,
                 avgTransaction,
-                essentialsSpent,
+                essentials: essentialsSpent,
             },
-            categoryData,
-            behaviorData,
-            monthlyData,
+            byCategory: categoryData,
+            byType: behaviorData,
+            byMonth: monthlyData,
+            hasTransactions: totalCount > 0
         });
     } catch (error: any) {
         console.error('Dashboard error:', error);
