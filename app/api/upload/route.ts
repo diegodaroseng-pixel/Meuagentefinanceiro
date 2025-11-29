@@ -5,6 +5,12 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
 
 export async function POST(request: NextRequest) {
     try {
+        const apiKey = process.env.GOOGLE_API_KEY;
+        if (!apiKey) {
+            console.error('Missing GOOGLE_API_KEY');
+            return NextResponse.json({ error: 'Server configuration error: Missing API Key' }, { status: 500 });
+        }
+
         const formData = await request.formData();
         const file = formData.get('file') as File;
 
@@ -21,7 +27,8 @@ export async function POST(request: NextRequest) {
         const mimeType = file.type || 'application/pdf';
 
         // Call Gemini API
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const prompt = `
 Você é um assistente financeiro especializado em extrair transações de documentos.
@@ -64,20 +71,32 @@ Retorne APENAS um JSON válido no formato:
         ]);
 
         const response = result.response.text();
+        console.log('Gemini raw response:', response.substring(0, 200) + '...'); // Log start of response
 
         // Extract JSON from response
         const jsonMatch = response.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-            throw new Error('No JSON found in response');
+            console.error('No JSON found in response:', response);
+            throw new Error('Failed to parse AI response: No JSON found');
         }
 
-        const data = JSON.parse(jsonMatch[0]);
+        let data;
+        try {
+            data = JSON.parse(jsonMatch[0]);
+        } catch (e) {
+            console.error('JSON parse error:', e, 'Response:', response);
+            throw new Error('Failed to parse AI response: Invalid JSON');
+        }
 
         // Add status to each transaction (simulate duplicate check)
-        data.transactions = data.transactions.map((tx: any) => ({
-            ...tx,
-            status: 'new', // In real app, check against database
-        }));
+        if (data.transactions) {
+            data.transactions = data.transactions.map((tx: any) => ({
+                ...tx,
+                status: 'new', // In real app, check against database
+            }));
+        } else {
+            data.transactions = [];
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {

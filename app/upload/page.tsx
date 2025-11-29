@@ -23,8 +23,11 @@ export default function UploadPage() {
     const [selectedCard, setSelectedCard] = useState('');
     const [selectedHolder, setSelectedHolder] = useState('Diego de Bem Daros');
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
+        setError(null);
         const droppedFile = e.dataTransfer.files[0];
         if (droppedFile) {
             setFile(droppedFile);
@@ -32,6 +35,7 @@ export default function UploadPage() {
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setError(null);
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
         }
@@ -41,6 +45,7 @@ export default function UploadPage() {
         if (!file) return;
 
         setProcessing(true);
+        setError(null);
         const formData = new FormData();
         formData.append('file', file);
 
@@ -52,14 +57,20 @@ export default function UploadPage() {
 
             const data = await response.json();
 
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro ao processar arquivo');
+            }
+
             if (data.transactions) {
                 setTransactions(data.transactions);
                 setSelectedBank(data.bank_name || '');
                 setSelectedCard(data.card_number || '');
+            } else {
+                throw new Error('Nenhuma transação encontrada no documento');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error processing file:', error);
-            alert('Erro ao processar arquivo');
+            setError(error.message || 'Erro desconhecido ao processar arquivo');
         } finally {
             setProcessing(false);
         }
@@ -98,6 +109,14 @@ export default function UploadPage() {
             <div className="max-w-6xl mx-auto">
                 <h1 className="text-4xl font-bold text-gray-900 mb-2">📂 Carregar Documentos</h1>
                 <p className="text-gray-600 mb-8">Faça upload de faturas, extratos ou comprovantes</p>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-center">
+                        <XCircle className="w-5 h-5 mr-2" />
+                        <span>{error}</span>
+                    </div>
+                )}
 
                 {/* Upload Area */}
                 <div

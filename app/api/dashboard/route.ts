@@ -1,10 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 export async function GET() {
     try {
+        const { userId } = await auth();
+
+        if (!userId) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         const transactions = await prisma.transaction.findMany({
             where: {
+                userId,
                 is_forecast: false,
             },
         });

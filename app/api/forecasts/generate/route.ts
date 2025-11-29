@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 export async function POST() {
   try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     let generatedCount = 0;
 
     // 1. Find future installments
     const installmentTransactions = await prisma.transaction.groupBy({
       by: ['description', 'installment_total'],
       where: {
+        userId,
         installment_total: { gt: 1 },
         is_forecast: false,
       },
@@ -26,6 +34,7 @@ export async function POST() {
       // Get the original transaction
       const original = await prisma.transaction.findFirst({
         where: {
+          userId,
           description: group.description,
           installment_total: totalInstallments,
         },
@@ -46,6 +55,7 @@ export async function POST() {
         // Check if forecast already exists
         const existing = await prisma.transaction.findFirst({
           where: {
+            userId,
             description: group.description,
             installment_current: i,
             installment_total: totalInstallments,
@@ -56,6 +66,7 @@ export async function POST() {
         if (!existing) {
           await prisma.transaction.create({
             data: {
+              userId,
               date_incurred: futureDate,
               date_payment: futurePaymentDate,
               description: original.description,
@@ -86,7 +97,7 @@ export async function POST() {
     // 2. Find recurring transactions
     const recurringGroups = await prisma.transaction.groupBy({
       by: ['description'],
-      where: { is_forecast: false },
+      where: { userId, is_forecast: false },
       _count: { id: true },
       _avg: { amount: true },
       _max: { date_incurred: true },
@@ -103,6 +114,7 @@ export async function POST() {
       if (nextDate > new Date()) {
         const existing = await prisma.transaction.findFirst({
           where: {
+            userId,
             description: group.description,
             date_incurred: { gte: nextDate },
             is_forecast: true,
@@ -111,12 +123,13 @@ export async function POST() {
 
         if (!existing) {
           const original = await prisma.transaction.findFirst({
-            where: { description: group.description },
+            where: { userId, description: group.description },
           });
 
           if (original) {
             await prisma.transaction.create({
               data: {
+                userId,
                 date_incurred: nextDate,
                 date_payment: nextDate,
                 description: group.description,
