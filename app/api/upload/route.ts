@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         // Call Gemini API
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const prompt = `
 Você é um assistente financeiro especializado em extrair transações de documentos.
