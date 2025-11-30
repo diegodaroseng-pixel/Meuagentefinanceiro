@@ -3,7 +3,8 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev",
+        "dev": "prisma generate --schema=./prisma/schema.local.prisma && next dev",
+        "db:push:local": "prisma db push --schema=./prisma/schema.local.prisma",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",

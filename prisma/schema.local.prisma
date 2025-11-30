@@ -1,0 +1,43 @@
+// This is your Prisma schema file for LOCAL DEVELOPMENT (SQLite)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id                   Int      @id @default(autoincrement())
+  userId               String   // Clerk user ID
+  date_incurred        DateTime
+  date_payment         DateTime
+  description          String
+  amount               Float
+  currency             String   @default("BRL")
+  category             String?
+  behavior_class       String?
+  installment_current  Int      @default(1)
+  installment_total    Int      @default(1)
+  payment_method       String?
+  entity               String?
+  sentiment            String?
+  source_file          String?
+  is_verified          Boolean  @default(false)
+  is_auto_generated    Boolean  @default(false)
+  is_forecast          Boolean  @default(false)
+  forecast_paid        Boolean  @default(false)
+  bank_name            String?
+  card_name            String?
+  card_holder          String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@index([date_incurred])
+  @@index([category])
+  @@index([is_forecast])
+  @@index([userId])
+  @@map("transactions")
+}
